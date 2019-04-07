@@ -34,7 +34,7 @@ class RNVideoPlayer: RCTView {
     var _replay: Bool = false
     var _rotate: Bool = false
     var isInitialized = false
-    var _resizeMode = AVLayerVideoGravity.resizeAspect
+  var _resizeMode = AVLayerVideoGravity.resizeAspect
     var onChange: RCTBubblingEventBlock?
     
     let LOG_KEY: String = "VIDEO_PROCESSING"
@@ -46,7 +46,7 @@ class RNVideoPlayer: RCTView {
                 self._playerHeight = val as! CGFloat
                 self.frame.size.height = self._playerHeight
                 self.rotate = self._rotate ? 1 : 0
-                print("CHANGED HEIGHT \(val)")
+                print("CHANGED HEIGHT \(val!)")
             }
         }
         get {
@@ -65,13 +65,13 @@ class RNVideoPlayer: RCTView {
     
     var resizeMode: NSString? {
         set {
-            guard let newValue = newValue as String? else {
+            if newValue == nil {
                 return
             }
-            self._resizeMode = AVLayerVideoGravity(rawValue: newValue)
+          self._resizeMode = AVLayerVideoGravity(rawValue: newValue! as String)
             self.playerLayer?.videoGravity = self._resizeMode
             self.setNeedsLayout()
-            print("CHANGED: resizeMode \(newValue)")
+          print("CHANGED: resizeMode \(newValue!)")
         }
         get {
             return nil
@@ -84,7 +84,7 @@ class RNVideoPlayer: RCTView {
                 self._playerWidth = val as! CGFloat
                 self.frame.size.width = self._playerWidth
                 self.rotate = self._rotate ? 1 : 0
-                print("CHANGED WIDTH \(val)")
+              print("CHANGED WIDTH \(String(describing: val))")
             }
         }
         get {
@@ -98,7 +98,7 @@ class RNVideoPlayer: RCTView {
         set(val) {
             if val != nil {
                 self._moviePathSource = val!
-                print("CHANGED source \(val)")
+              print("CHANGED source \(String(describing: val))")
                 if self.gpuMovie != nil {
                     self.gpuMovie.endProcessing()
                 }
@@ -118,7 +118,7 @@ class RNVideoPlayer: RCTView {
                 let floatVal = convertedValue >= 0 ? convertedValue : self._playerStartTime
                 print("CHANGED: currentTime \(floatVal)")
                 if floatVal <= self._playerEndTime && floatVal >= self._playerStartTime {
-                    self.player.seek(to: convertToCMTime(val: floatVal), toleranceBefore: .zero, toleranceAfter: .zero)
+                  self.player.seek(to: convertToCMTime(val: floatVal), toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
                 }
             }
         }
@@ -138,7 +138,7 @@ class RNVideoPlayer: RCTView {
             self._playerStartTime = convertedValue
             
             if convertedValue < 0 {
-                print("WARNING: startTime is a negative number: \(val)")
+              print("WARNING: startTime is a negative number: \(String(describing: val ?? val))")
                 self._playerStartTime = 0.0
             }
             
@@ -237,7 +237,7 @@ class RNVideoPlayer: RCTView {
                     filterView.frame.size.height = self._playerWidth
                     filterView.bounds.size.width = self._playerHeight
                     filterView.bounds.size.height = self._playerWidth
-                    rotationAngle = CGFloat.pi / 2
+                    rotationAngle = CGFloat(M_PI_2)
                 } else {
                     filterView.frame.size.width = self._playerWidth
                     filterView.frame.size.height = self._playerHeight
@@ -292,17 +292,17 @@ class RNVideoPlayer: RCTView {
     }
     
     func toBase64(image: UIImage) -> String {
-        let imageData:NSData = image.pngData()! as NSData
+      let imageData:NSData = image.pngData()! as NSData
         return imageData.base64EncodedString(options: .lineLength64Characters)
     }
     
     func convertToCMTime(val: CGFloat) -> CMTime {
-        return CMTimeMakeWithSeconds(Float64(val), preferredTimescale: Int32(NSEC_PER_SEC))
+      return CMTimeMakeWithSeconds(Float64(val), preferredTimescale: Int32(NSEC_PER_SEC))
     }
     
     func createPlayerObservers() -> Void {
         // TODO: clean obersable when View going to diesappear
-        let interval = CMTimeMakeWithSeconds(1.0, preferredTimescale: Int32(NSEC_PER_SEC))
+      let interval = CMTimeMakeWithSeconds(1.0, preferredTimescale: Int32(NSEC_PER_SEC))
         self.playerCurrentTimeObserver = self.player.addPeriodicTimeObserver(
             forInterval: interval,
             queue: nil,
@@ -341,9 +341,9 @@ class RNVideoPlayer: RCTView {
         
         if self.player == nil {
             player = AVPlayer()
-            player.volume = playerVolume.floatValue
+          player.volume = Float(truncating: self.playerVolume)
         }
-        playerItem = AVPlayerItem(url: movieURL as! URL)
+      playerItem = AVPlayerItem(url: movieURL! as URL)
         player.replaceCurrentItem(with: playerItem)
         
         // MARK - Temporary removing playeLayer, it dublicates video if it's in landscape mode
@@ -354,7 +354,7 @@ class RNVideoPlayer: RCTView {
         //        playerLayer!.removeFromSuperlayer()
         //        filterView.layer.addSublayer(playerLayer!)
         
-        print("CHANGED playerframe \(playerLayer), frameAAA \(playerLayer?.frame)")
+      print("CHANGED playerframe \(String(describing: playerLayer)), frameAAA \(String(describing: playerLayer?.frame))")
         self.setNeedsLayout()
         
         self._playerEndTime = CGFloat(CMTimeGetSeconds((player.currentItem?.asset.duration)!))
@@ -382,8 +382,8 @@ class RNVideoPlayer: RCTView {
         super.willMove(toSuperview: newSuperview)
         if newSuperview == nil {
             
-            if let observer = self.playerCurrentTimeObserver {
-                self.player.removeTimeObserver(observer)
+            if self.playerCurrentTimeObserver != nil {
+                self.player.removeTimeObserver(self.playerCurrentTimeObserver)
             }
             if player != nil {
                 self.player.pause()

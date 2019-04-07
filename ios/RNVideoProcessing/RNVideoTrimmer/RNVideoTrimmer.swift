@@ -5,7 +5,7 @@
 
 import Foundation
 import AVFoundation
-import UIKit
+import Photos
 
 enum QUALITY_ENUM: String {
   case QUALITY_LOW = "low"
@@ -23,19 +23,19 @@ enum QUALITY_ENUM: String {
 class RNVideoTrimmer: NSObject {
 
   @objc func getVideoOrientationFromAsset(asset : AVAsset) -> UIImage.Orientation {
-    let videoTrack: AVAssetTrack? = asset.tracks(withMediaType: .video)[0]
+    let videoTrack: AVAssetTrack? = asset.tracks(withMediaType: AVMediaType.video)[0]
     let size = videoTrack!.naturalSize
 
     let txf: CGAffineTransform = videoTrack!.preferredTransform
 
     if (size.width == txf.tx && size.height == txf.ty) {
-      return .left;
+      return UIImage.Orientation.left;
     } else if (txf.tx == 0 && txf.ty == 0) {
-      return .right;
+      return UIImage.Orientation.right;
     } else if (txf.tx == 0 && txf.ty == size.width) {
-      return .down;
+      return UIImage.Orientation.down;
     } else {
-      return .up;
+      return UIImage.Orientation.up;
     }
   }
 
@@ -82,17 +82,17 @@ class RNVideoTrimmer: NSObject {
     }
 
     exportSession.outputURL = NSURL.fileURL(withPath: outputURL)
-    exportSession.outputFileType = .mp4
+    exportSession.outputFileType = AVFileType.mp4
     exportSession.shouldOptimizeForNetworkUse = true
 
     let videoComposition = AVMutableVideoComposition(propertiesOf: asset)
-    let clipVideoTrack: AVAssetTrack! = asset.tracks(withMediaType: .video)[0]
+    let clipVideoTrack: AVAssetTrack! = asset.tracks(withMediaType: AVMediaType.video)[0]
     let videoOrientation = self.getVideoOrientationFromAsset(asset: asset)
 
     let videoWidth : CGFloat
     let videoHeight : CGFloat
 
-    if ( videoOrientation == .up || videoOrientation == .down ) {
+    if ( videoOrientation == UIImage.Orientation.up || videoOrientation == UIImage.Orientation.down ) {
       videoWidth = clipVideoTrack.naturalSize.height
       videoHeight = clipVideoTrack.naturalSize.width
     } else {
@@ -119,7 +119,7 @@ class RNVideoTrimmer: NSObject {
     videoComposition.renderSize = CGSize(width: cropWidth, height: cropHeight)
 
     let instruction : AVMutableVideoCompositionInstruction = AVMutableVideoCompositionInstruction()
-    instruction.timeRange = CMTimeRange(start: .zero, end: asset.duration)
+    instruction.timeRange = CMTimeRange(start: CMTime.zero, end: asset.duration)
 
     var t1 = CGAffineTransform.identity
     var t2 = CGAffineTransform.identity
@@ -128,21 +128,21 @@ class RNVideoTrimmer: NSObject {
 
 
     switch videoOrientation {
-    case .up:
+    case UIImage.Orientation.up:
       t1 = CGAffineTransform(translationX: clipVideoTrack.naturalSize.height - cropOffsetX, y: 0 - cropOffsetY );
-      t2 = t1.rotated(by: CGFloat.pi / 2 );
+      t2 = t1.rotated(by: CGFloat(Double.pi / 2) );
       break;
-    case .left:
+    case UIImage.Orientation.left:
       t1 = CGAffineTransform(translationX: clipVideoTrack.naturalSize.width - cropOffsetX, y: clipVideoTrack.naturalSize.height - cropOffsetY );
-      t2 = t1.rotated(by: CGFloat.pi  );
+      t2 = t1.rotated(by: CGFloat(Double.pi)  );
       break;
-    case .right:
+    case UIImage.Orientation.right:
       t1 = CGAffineTransform(translationX: 0 - cropOffsetX, y: 0 - cropOffsetY );
       t2 = t1.rotated(by: 0);
       break;
-    case .down:
+    case UIImage.Orientation.down:
       t1 = CGAffineTransform(translationX: 0 - cropOffsetX, y: clipVideoTrack.naturalSize.width - cropOffsetY ); // not fixed width is the real height in upside down
-      t2 = t1.rotated(by: -CGFloat.pi / 2 );
+      t2 = t1.rotated(by: -(CGFloat)(Double.pi / 2) );
       break;
     default:
       NSLog("no supported orientation has been found in this video");
@@ -150,7 +150,7 @@ class RNVideoTrimmer: NSObject {
     }
 
     let finalTransform: CGAffineTransform = t2
-    transformer.setTransform(finalTransform, at: .zero)
+    transformer.setTransform(finalTransform, at: CMTime.zero)
 
     instruction.layerInstructions = [transformer]
     videoComposition.instructions = [instruction]
@@ -163,10 +163,10 @@ class RNVideoTrimmer: NSObject {
         callback( [NSNull(), outputURL] )
 
       case .failed:
-        callback( ["Failed: \(exportSession.error)", NSNull()] )
+        callback( ["Failed: \(exportSession.error!)", NSNull()] )
 
       case .cancelled:
-        callback( ["Cancelled: \(exportSession.error)", NSNull()] )
+        callback( ["Cancelled: \(exportSession.error!)", NSNull()] )
 
       default: break
       }
@@ -226,14 +226,14 @@ class RNVideoTrimmer: NSObject {
               return
       }
       exportSession.outputURL = NSURL.fileURL(withPath: outputURL.path)
-      exportSession.outputFileType = .mp4
+    exportSession.outputFileType = AVFileType.mp4
       exportSession.shouldOptimizeForNetworkUse = true
 
       if saveToCameraRoll && saveWithCurrentDate {
         let metaItem = AVMutableMetadataItem()
-        metaItem.key = AVMetadataKey.commonKeyCreationDate as (NSCopying & NSObjectProtocol)
-        metaItem.keySpace = .common
-        metaItem.value = NSDate()
+        metaItem.key = AVMetadataKey.commonKeyCreationDate as (NSCopying & NSObjectProtocol)?
+        metaItem.keySpace = AVMetadataKeySpace.common
+        metaItem.value = NSDate() as (NSCopying & NSObjectProtocol)?
         exportSession.metadata = [metaItem]
       }
 
@@ -251,10 +251,10 @@ class RNVideoTrimmer: NSObject {
               }
 
           case .failed:
-              callback( ["Failed: \(exportSession.error)", NSNull()] )
+              callback( ["Failed: \(exportSession.error!)", NSNull()] )
 
           case .cancelled:
-              callback( ["Cancelled: \(exportSession.error)", NSNull()] )
+              callback( ["Cancelled: \(exportSession.error!)", NSNull()] )
 
           default: break
           }
@@ -276,7 +276,7 @@ class RNVideoTrimmer: NSObject {
     let firstAsset = AVAsset(url: sourceURL as URL)
 
     let mixComposition = AVMutableComposition()
-    let track = mixComposition.addMutableTrack(withMediaType: .video, preferredTrackID: Int32(kCMPersistentTrackID_Invalid))
+    let track = mixComposition.addMutableTrack(withMediaType: AVMediaType.video, preferredTrackID: Int32(kCMPersistentTrackID_Invalid))
 
 
     var outputURL = documentDirectory.appendingPathComponent("output")
@@ -300,21 +300,21 @@ class RNVideoTrimmer: NSObject {
 
 //    print("RNVideoTrimmer passed quality: \(quality). useQuality: \(useQuality)")
 
-    AVUtilities.reverse(firstAsset, outputURL: outputURL, completion: { [unowned self] (reversedAsset: AVAsset) in
+    AVUtilities.reverse(firstAsset, outputURL: outputURL, completion: { (reversedAsset: AVAsset) in
 
 
       let secondAsset = reversedAsset
 
       // Credit: https://www.raywenderlich.com/94404/play-record-merge-videos-ios-swift
       do {
-        try track?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: firstAsset.duration), of: firstAsset.tracks(withMediaType: .video)[0], at: .zero)
+        try track?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: firstAsset.duration), of: firstAsset.tracks(withMediaType: AVMediaType.video)[0], at: CMTime.zero)
       } catch _ {
         callback( ["Failed: Could not load 1st track", NSNull()] )
         return
       }
 
       do {
-        try track?.insertTimeRange(CMTimeRangeMake(start: .zero, duration: secondAsset.duration), of: secondAsset.tracks(withMediaType: .video)[0], at: mixComposition.duration)
+        try track?.insertTimeRange(CMTimeRangeMake(start: CMTime.zero, duration: secondAsset.duration), of: secondAsset.tracks(withMediaType: AVMediaType.video)[0], at: mixComposition.duration)
       } catch _ {
         callback( ["Failed: Could not load 2nd track", NSNull()] )
         return
@@ -326,7 +326,7 @@ class RNVideoTrimmer: NSObject {
         return
       }
       exportSession.outputURL = NSURL.fileURL(withPath: finalURL.path)
-      exportSession.outputFileType = .mp4
+      exportSession.outputFileType = AVFileType.mp4
       exportSession.shouldOptimizeForNetworkUse = true
       let startTime = CMTime(seconds: Double(0), preferredTimescale: 1000)
       let endTime = CMTime(seconds: mixComposition.duration.seconds, preferredTimescale: 1000)
@@ -340,10 +340,10 @@ class RNVideoTrimmer: NSObject {
           callback( [NSNull(), finalURL.absoluteString] )
 
         case .failed:
-          callback( ["Failed: \(exportSession.error)", NSNull()] )
+          callback( ["Failed: \(exportSession.error!)", NSNull()] )
 
         case .cancelled:
-          callback( ["Cancelled: \(exportSession.error)", NSNull()] )
+          callback( ["Cancelled: \(exportSession.error!)", NSNull()] )
 
         default: break
         }
@@ -382,7 +382,7 @@ class RNVideoTrimmer: NSObject {
 
     print("RNVideoTrimmer passed quality: \(quality). useQuality: \(useQuality)")
 
-    AVUtilities.reverse(asset, outputURL: outputURL, completion: { [unowned self] (asset: AVAsset) in
+    AVUtilities.reverse(asset, outputURL: outputURL, completion: { (asset: AVAsset) in
       callback( [NSNull(), outputURL.absoluteString] )
     })
   }
@@ -403,90 +403,180 @@ class RNVideoTrimmer: NSObject {
               callback(["Error creating FileManager", NSNull()])
               return
       }
-
-      let sourceURL = getSourceURL(source: source)
-      let asset = AVAsset(url: sourceURL as URL)
-
-      guard let videoTrack = asset.tracks(withMediaType: .video).first else  {
+    
+    let name = randomString()
+    if source.contains("ph://") {
+      let sourceT = source.replacingOccurrences(of: "ph://", with: "")
+      let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [sourceT], options: nil)
+      PHImageManager.default().requestAVAsset(forVideo: fetchResult[0], options: nil) { (assetT: AVAsset?, audioMix, info) in
+        
+        if assetT == nil { return }
+        let asset = assetT!
+        guard let videoTrack = asset.tracks(withMediaType: AVMediaType.video).first else  {
           callback(["Error getting track info", NSNull()])
           return
+        }
+        
+        let naturalSize = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
+        let bps = videoTrack.estimatedDataRate
+        width = width ?? Float(abs(naturalSize.width))
+        height = height ?? Float(abs(naturalSize.height))
+        var averageBitrate = bps / bitrateMultiplier
+        if minimumBitrate != nil {
+          if averageBitrate < minimumBitrate! {
+            averageBitrate = minimumBitrate!
+          }
+          if bps < minimumBitrate! {
+            averageBitrate = bps
+          }
+        }
+        
+        var outputURL = documentDirectory.appendingPathComponent("output")
+        do {
+          try manager.createDirectory(at: outputURL, withIntermediateDirectories: true, attributes: nil)
+          outputURL = outputURL.appendingPathComponent("\(name)-compressed.mp4")
+        } catch {
+          callback([error.localizedDescription, NSNull()])
+          print(error)
+        }
+        
+        //Remove existing file
+        _ = try? manager.removeItem(at: outputURL)
+        
+        let compressionEncoder = SDAVAssetExportSession(asset: asset)
+        if compressionEncoder == nil {
+          callback(["Error creating AVAssetExportSession", NSNull()])
+          return
+        }
+        compressionEncoder!.outputFileType = AVFileType.mp4.rawValue
+        compressionEncoder!.outputURL = NSURL.fileURL(withPath: outputURL.path)
+        compressionEncoder!.shouldOptimizeForNetworkUse = true
+        if saveToCameraRoll && saveWithCurrentDate {
+          let metaItem = AVMutableMetadataItem()
+          metaItem.key = AVMetadataKey.commonKeyCreationDate as (NSCopying & NSObjectProtocol)?
+          metaItem.keySpace = AVMetadataKeySpace.common
+          metaItem.value = NSDate() as (NSCopying & NSObjectProtocol)?
+          compressionEncoder!.metadata = [metaItem]
+        }
+        compressionEncoder?.videoSettings = [
+          AVVideoCodecKey: AVVideoCodecH264,
+          AVVideoWidthKey: NSNumber.init(value: width!),
+          AVVideoHeightKey: NSNumber.init(value: height!),
+          AVVideoCompressionPropertiesKey: [
+            AVVideoAverageBitRateKey: NSNumber.init(value: averageBitrate),
+            AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
+          ]
+        ]
+        if !removeAudio {
+          compressionEncoder?.audioSettings = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVNumberOfChannelsKey: 1,
+            AVSampleRateKey: 44100,
+            AVEncoderBitRateKey: 128000
+          ]
+        }
+        compressionEncoder!.exportAsynchronously(completionHandler: {
+          switch compressionEncoder!.status {
+          case .completed:
+            callback( [NSNull(), outputURL.absoluteString] )
+            if saveToCameraRoll {
+              UISaveVideoAtPathToSavedPhotosAlbum(outputURL.relativePath, self, nil, nil)
+            }
+          case .failed:
+            callback( ["Failed: \(compressionEncoder!.error!)", NSNull()] )
+            
+          case .cancelled:
+            callback( ["Cancelled: \(compressionEncoder!.error!)", NSNull()] )
+            
+          default: break
+          }
+        })
       }
-
+    } else {
+      let sourceURL = getSourceURL(source: source)
+      let asset = AVAsset(url: sourceURL as URL)
+      
+      guard let videoTrack = asset.tracks(withMediaType: AVMediaType.video).first else  {
+        callback(["Error getting track info", NSNull()])
+        return
+      }
+      
       let naturalSize = videoTrack.naturalSize.applying(videoTrack.preferredTransform)
       let bps = videoTrack.estimatedDataRate
       width = width ?? Float(abs(naturalSize.width))
       height = height ?? Float(abs(naturalSize.height))
       var averageBitrate = bps / bitrateMultiplier
       if minimumBitrate != nil {
-          if averageBitrate < minimumBitrate! {
-              averageBitrate = minimumBitrate!
-          }
-          if bps < minimumBitrate! {
-              averageBitrate = bps
-          }
+        if averageBitrate < minimumBitrate! {
+          averageBitrate = minimumBitrate!
+        }
+        if bps < minimumBitrate! {
+          averageBitrate = bps
+        }
       }
-
+      
       var outputURL = documentDirectory.appendingPathComponent("output")
       do {
-          try manager.createDirectory(at: outputURL, withIntermediateDirectories: true, attributes: nil)
-          let name = randomString()
-          outputURL = outputURL.appendingPathComponent("\(name)-compressed.mp4")
+        try manager.createDirectory(at: outputURL, withIntermediateDirectories: true, attributes: nil)
+//        let name = randomString()
+        outputURL = outputURL.appendingPathComponent("\(name)-compressed.mp4")
       } catch {
-          callback([error.localizedDescription, NSNull()])
-          print(error)
+        callback([error.localizedDescription, NSNull()])
+        print(error)
       }
-
+      
       //Remove existing file
       _ = try? manager.removeItem(at: outputURL)
-
+      
       let compressionEncoder = SDAVAssetExportSession(asset: asset)
       if compressionEncoder == nil {
-          callback(["Error creating AVAssetExportSession", NSNull()])
-          return
+        callback(["Error creating AVAssetExportSession", NSNull()])
+        return
       }
       compressionEncoder!.outputFileType = AVFileType.mp4.rawValue
       compressionEncoder!.outputURL = NSURL.fileURL(withPath: outputURL.path)
       compressionEncoder!.shouldOptimizeForNetworkUse = true
       if saveToCameraRoll && saveWithCurrentDate {
         let metaItem = AVMutableMetadataItem()
-        metaItem.key = AVMetadataKey.commonKeyCreationDate as (NSCopying & NSObjectProtocol)
-        metaItem.keySpace = .common
-        metaItem.value = NSDate()
+        metaItem.key = AVMetadataKey.commonKeyCreationDate as (NSCopying & NSObjectProtocol)?
+        metaItem.keySpace = AVMetadataKeySpace.common
+        metaItem.value = NSDate() as (NSCopying & NSObjectProtocol)?
         compressionEncoder!.metadata = [metaItem]
       }
       compressionEncoder?.videoSettings = [
-          AVVideoCodecKey: AVVideoCodecH264,
-          AVVideoWidthKey: NSNumber.init(value: width!),
-          AVVideoHeightKey: NSNumber.init(value: height!),
-          AVVideoCompressionPropertiesKey: [
-              AVVideoAverageBitRateKey: NSNumber.init(value: averageBitrate),
-              AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
-          ]
+        AVVideoCodecKey: AVVideoCodecH264,
+        AVVideoWidthKey: NSNumber.init(value: width!),
+        AVVideoHeightKey: NSNumber.init(value: height!),
+        AVVideoCompressionPropertiesKey: [
+          AVVideoAverageBitRateKey: NSNumber.init(value: averageBitrate),
+          AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel
+        ]
       ]
       if !removeAudio {
         compressionEncoder?.audioSettings = [
-            AVFormatIDKey: kAudioFormatMPEG4AAC,
-            AVNumberOfChannelsKey: 1,
-            AVSampleRateKey: 44100,
-            AVEncoderBitRateKey: 128000
+          AVFormatIDKey: kAudioFormatMPEG4AAC,
+          AVNumberOfChannelsKey: 1,
+          AVSampleRateKey: 44100,
+          AVEncoderBitRateKey: 128000
         ]
       }
       compressionEncoder!.exportAsynchronously(completionHandler: {
-          switch compressionEncoder!.status {
-          case .completed:
-              callback( [NSNull(), outputURL.absoluteString] )
-              if saveToCameraRoll {
-                  UISaveVideoAtPathToSavedPhotosAlbum(outputURL.relativePath, self, nil, nil)
-              }
-          case .failed:
-              callback( ["Failed: \(compressionEncoder!.error)", NSNull()] )
-
-          case .cancelled:
-              callback( ["Cancelled: \(compressionEncoder!.error)", NSNull()] )
-
-          default: break
+        switch compressionEncoder!.status {
+        case .completed:
+          callback( [NSNull(), outputURL.absoluteString] )
+          if saveToCameraRoll {
+            UISaveVideoAtPathToSavedPhotosAlbum(outputURL.relativePath, self, nil, nil)
           }
+        case .failed:
+          callback( ["Failed: \(compressionEncoder!.error!)", NSNull()] )
+          
+        case .cancelled:
+          callback( ["Cancelled: \(compressionEncoder!.error!)", NSNull()] )
+          
+        default: break
+        }
       })
+    }
   }
 
   @objc func getAssetInfo(_ source: String, callback: RCTResponseSenderBlock) {
@@ -495,7 +585,7 @@ class RNVideoTrimmer: NSObject {
     var assetInfo: [String: Any] = [
       "duration" : asset.duration.seconds
     ]
-    if let track = asset.tracks(withMediaType: .video).first {
+    if let track = asset.tracks(withMediaType: AVMediaType.video).first {
       let naturalSize = track.naturalSize
       let t = track.preferredTransform
       let isPortrait = t.a == 0 && abs(t.b) == 1 && t.d == 0
@@ -511,55 +601,119 @@ class RNVideoTrimmer: NSObject {
   }
 
   @objc func getPreviewImageAtPosition(_ source: String, atTime: Float = 0, maximumSize: NSDictionary, format: String = "base64", callback: @escaping RCTResponseSenderBlock) {
-    let sourceURL = getSourceURL(source: source)
-    let asset = AVAsset(url: sourceURL)
-
-    var width: CGFloat = 1080
-    if let _width = maximumSize.object(forKey: "width") as? CGFloat {
-      width = _width
-    }
-    var height: CGFloat = 1080
-    if let _height = maximumSize.object(forKey: "height") as? CGFloat {
-      height = _height
-    }
-
-    let imageGenerator = AVAssetImageGenerator(asset: asset)
-    imageGenerator.maximumSize = CGSize(width: width, height: height)
-    imageGenerator.appliesPreferredTrackTransform = true
-    var second = atTime
-    if atTime > Float(asset.duration.seconds) || atTime < 0 {
-      second = 0
-    }
-    let timestamp = CMTime(seconds: Double(second), preferredTimescale: 600)
-    do {
-      let imageRef = try imageGenerator.copyCGImage(at: timestamp, actualTime: nil)
-      let image = UIImage(cgImage: imageRef)
-      if ( format == "base64" ) {
-        let imgData = image.pngData()
-        let base64string = imgData?.base64EncodedString(options: Data.Base64EncodingOptions.init(rawValue: 0))
-        if base64string != nil {
-          callback( [NSNull(), base64string!] )
-        } else {
-          callback( ["Unable to convert to base64)", NSNull()]  )
+    
+    if source.contains("ph://") {
+      let sourceT = source.replacingOccurrences(of: "ph://", with: "")
+      let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [sourceT], options: nil)
+      PHImageManager.default().requestAVAsset(forVideo: fetchResult[0], options: nil) { (assetT: AVAsset?, audioMix, info) in
+        
+        if assetT == nil {
+          return
         }
-      } else if ( format == "JPEG" ) {
-        let imgData = image.jpegData(compressionQuality: 1)
-
-        let fileName = ProcessInfo.processInfo.globallyUniqueString
-        let fullPath = "\(NSTemporaryDirectory())\(fileName).jpg"
-
-        try imgData?.write(to: URL(fileURLWithPath: fullPath), options: .atomic)
-
-        let imageWidth = imageRef.width
-        let imageHeight = imageRef.height
-        let imageFormattedData: [AnyHashable: Any] = ["uri": fullPath, "width": imageWidth, "height": imageHeight]
-
-        callback( [NSNull(), imageFormattedData] )
-      } else {
-        callback( ["Failed format. Expected one of 'base64' or 'JPEG'", NSNull()] )
+        let asset = assetT!
+        var width: CGFloat = 1080
+        if let _width = maximumSize.object(forKey: "width") as? CGFloat {
+          width = _width
+        }
+        var height: CGFloat = 1080
+        if let _height = maximumSize.object(forKey: "height") as? CGFloat {
+          height = _height
+        }
+        
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.maximumSize = CGSize(width: width, height: height)
+        imageGenerator.appliesPreferredTrackTransform = true
+        
+        var second = atTime
+        if atTime > Float(asset.duration.seconds) || atTime < 0 {
+          second = 0
+        }
+        let timestamp = CMTime(seconds: Double(second), preferredTimescale: 600)
+        do {
+          let imageRef = try imageGenerator.copyCGImage(at: timestamp, actualTime: nil)
+          let image = UIImage(cgImage: imageRef)
+          
+          if ( format == "base64" ) {
+            let imgData = image.pngData()
+            let base64string = imgData?.base64EncodedString(options: Data.Base64EncodingOptions.init(rawValue: 0))
+            if base64string != nil {
+              callback( [NSNull(), base64string!] )
+            } else {
+              callback( ["Unable to convert to base64)", NSNull()]  )
+            }
+          } else if ( format == "JPEG" ) {
+            let imgData = image.jpegData(compressionQuality: 1)
+            
+            let fileName = ProcessInfo.processInfo.globallyUniqueString
+            let fullPath = "\(NSTemporaryDirectory())\(fileName).jpg"
+            
+            try imgData?.write(to: URL(fileURLWithPath: fullPath), options: .atomic)
+            
+            let imageWidth = imageRef.width
+            let imageHeight = imageRef.height
+            let imageFormattedData: [AnyHashable: Any] = ["uri": fullPath, "width": imageWidth, "height": imageHeight]
+            
+            callback( [NSNull(), imageFormattedData] )
+          } else {
+            callback( ["Failed format. Expected one of 'base64' or 'JPEG'", NSNull()] )
+          }
+        } catch {
+          callback( ["Failed to convert base64: \(error.localizedDescription)", NSNull()] )
+        }
       }
-    } catch {
-      callback( ["Failed to convert base64: \(error.localizedDescription)", NSNull()] )
+    } else {
+      let sourceURL = getSourceURL(source: source)
+      let asset = AVAsset(url: sourceURL)
+      
+      var width: CGFloat = 1080
+      if let _width = maximumSize.object(forKey: "width") as? CGFloat {
+        width = _width
+      }
+      var height: CGFloat = 1080
+      if let _height = maximumSize.object(forKey: "height") as? CGFloat {
+        height = _height
+      }
+      
+      let imageGenerator = AVAssetImageGenerator(asset: asset)
+      imageGenerator.maximumSize = CGSize(width: width, height: height)
+      imageGenerator.appliesPreferredTrackTransform = true
+      
+      var second = atTime
+      if atTime > Float(asset.duration.seconds) || atTime < 0 {
+        second = 0
+      }
+      let timestamp = CMTime(seconds: Double(second), preferredTimescale: 600)
+      do {
+        let imageRef = try imageGenerator.copyCGImage(at: timestamp, actualTime: nil)
+        let image = UIImage(cgImage: imageRef)
+        
+        if ( format == "base64" ) {
+          let imgData = image.pngData()
+          let base64string = imgData?.base64EncodedString(options: Data.Base64EncodingOptions.init(rawValue: 0))
+          if base64string != nil {
+            callback( [NSNull(), base64string!] )
+          } else {
+            callback( ["Unable to convert to base64)", NSNull()]  )
+          }
+        } else if ( format == "JPEG" ) {
+          let imgData = image.jpegData(compressionQuality: 1)
+          
+          let fileName = ProcessInfo.processInfo.globallyUniqueString
+          let fullPath = "\(NSTemporaryDirectory())\(fileName).jpg"
+          
+          try imgData?.write(to: URL(fileURLWithPath: fullPath), options: .atomic)
+          
+          let imageWidth = imageRef.width
+          let imageHeight = imageRef.height
+          let imageFormattedData: [AnyHashable: Any] = ["uri": fullPath, "width": imageWidth, "height": imageHeight]
+          
+          callback( [NSNull(), imageFormattedData] )
+        } else {
+          callback( ["Failed format. Expected one of 'base64' or 'JPEG'", NSNull()] )
+        }
+      } catch {
+        callback( ["Failed to convert base64: \(error.localizedDescription)", NSNull()] )
+      }
     }
   }
 
@@ -576,7 +730,7 @@ class RNVideoTrimmer: NSObject {
   func getSourceURL(source: String) -> URL {
     var sourceURL: URL
     if source.contains("assets-library") {
-      sourceURL = NSURL(string: source) as! URL
+      sourceURL = NSURL(string: source)! as URL
     } else {
       let bundleUrl = Bundle.main.resourceURL!
       sourceURL = URL(string: source, relativeTo: bundleUrl)!
